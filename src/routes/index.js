@@ -1,8 +1,9 @@
 const express = require('express');
+const path = require('path');
 const router = express.Router();
 
 router.get('/favicon.ico', (req, res) => {
-  res.redirect('/favicon.png');
+  res.sendFile(path.join(__dirname, '..', '..', 'public', 'favicon.png'));
 });
 
 router.get('/', (req, res) => {

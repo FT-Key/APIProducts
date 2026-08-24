@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const indexRoutes = require('./routes/index');
@@ -33,7 +34,7 @@ const authLimiter = rateLimit({
   message: { error: 'Too many token requests. Try again in 15 minutes.' }
 });
 
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use(express.json());
 app.use(generalLimiter);
 
