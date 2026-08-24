@@ -232,3 +232,81 @@ describe('8. User isolation', () => {
     log('User 2 trying to delete User 1 product: 404 (blocked)');
   });
 });
+
+describe('9. imgUrl field', () => {
+  let imgProductId;
+
+  it('should create product with imgUrl', async () => {
+    const res = await request(app)
+      .post('/api/products')
+      .set('Authorization', `Bearer ${tokenUser1}`)
+      .send({ name: 'Webcam', price: 60, imgUrl: 'https://example.com/webcam.jpg' });
+    expect(res.status).toBe(201);
+    expect(res.body.imgUrl).toBe('https://example.com/webcam.jpg');
+    imgProductId = res.body._id;
+    log(`Created: Webcam with imgUrl: ${res.body.imgUrl}`);
+  });
+
+  it('should reject invalid imgUrl', async () => {
+    const res = await request(app)
+      .post('/api/products')
+      .set('Authorization', `Bearer ${tokenUser1}`)
+      .send({ name: 'Bad img', price: 10, imgUrl: 'not-a-url' });
+    expect(res.status).toBe(400);
+    log('Rejected invalid imgUrl: 400');
+  });
+
+  it('should reject ftp:// protocol', async () => {
+    const res = await request(app)
+      .post('/api/products')
+      .set('Authorization', `Bearer ${tokenUser1}`)
+      .send({ name: 'Bad img', price: 10, imgUrl: 'ftp://example.com/file.jpg' });
+    expect(res.status).toBe(400);
+    log('Rejected ftp:// imgUrl: 400');
+  });
+
+  it('should update imgUrl', async () => {
+    const res = await request(app)
+      .put(`/api/products/${imgProductId}`)
+      .set('Authorization', `Bearer ${tokenUser1}`)
+      .send({ imgUrl: 'https://example.com/webcam-v2.jpg' });
+    expect(res.status).toBe(200);
+    expect(res.body.imgUrl).toBe('https://example.com/webcam-v2.jpg');
+    log(`Updated imgUrl: ${res.body.imgUrl}`);
+  });
+});
+
+describe('10. Input sanitization', () => {
+  it('should strip HTML tags from name', async () => {
+    const res = await request(app)
+      .post('/api/products')
+      .set('Authorization', `Bearer ${tokenUser1}`)
+      .send({ name: '<script>alert("xss")</script>Laptop', price: 100 });
+    expect(res.status).toBe(201);
+    expect(res.body.name).not.toContain('<script>');
+    expect(res.body.name).toBe('Laptop');
+    log(`Sanitized name: "${res.body.name}" (HTML stripped)`);
+  });
+
+  it('should strip HTML tags from description', async () => {
+    const res = await request(app)
+      .post('/api/products')
+      .set('Authorization', `Bearer ${tokenUser1}`)
+      .send({ name: 'Test', price: 10, description: '<img src=x onerror=alert(1)>Nice product' });
+    expect(res.status).toBe(201);
+    expect(res.body.description).not.toContain('<img');
+    expect(res.body.description).toBe('Nice product');
+    log(`Sanitized description: "${res.body.description}" (HTML stripped)`);
+  });
+
+  it('should ignore unknown fields', async () => {
+    const res = await request(app)
+      .post('/api/products')
+      .set('Authorization', `Bearer ${tokenUser1}`)
+      .send({ name: 'Secure', price: 10, _id: 'fake123', clientId: 'hacked', active: false, createdAt: '2000-01-01' });
+    expect(res.status).toBe(201);
+    expect(res.body.clientId).not.toBe('hacked');
+    expect(res.body.active).toBe(true);
+    log('Unknown fields ignored: clientId, _id, active, createdAt not overridden');
+  });
+});

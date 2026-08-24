@@ -1,5 +1,38 @@
 const Product = require('../models/Product');
 
+// Sanitize string: strip HTML tags and trim
+const sanitizeString = (str) => {
+  if (typeof str !== 'string') return '';
+  return str.replace(/<[^>]*>/g, '').trim();
+};
+
+// Validate URL format
+const isValidUrl = (str) => {
+  if (!str) return true;
+  try {
+    const url = new URL(str);
+    return ['http:', 'https:'].includes(url.protocol);
+  } catch {
+    return false;
+  }
+};
+
+// Allowed fields for create/update
+const ALLOWED_FIELDS = ['name', 'price', 'description', 'imgUrl', 'stock'];
+
+const sanitizeInput = (body) => {
+  const clean = {};
+  for (const field of ALLOWED_FIELDS) {
+    if (body[field] !== undefined) {
+      clean[field] = body[field];
+    }
+  }
+  if (clean.name) clean.name = sanitizeString(clean.name);
+  if (clean.description) clean.description = sanitizeString(clean.description);
+  if (clean.imgUrl) clean.imgUrl = sanitizeString(clean.imgUrl);
+  return clean;
+};
+
 const getAll = async (req, res) => {
   try {
     const products = await Product.find({ clientId: req.clientId });
@@ -23,17 +56,30 @@ const getById = async (req, res) => {
 
 const create = async (req, res) => {
   try {
-    const { name, price, description, stock } = req.body;
+    const clean = sanitizeInput(req.body);
 
-    if (!name || price === undefined) {
+    if (!clean.name || clean.price === undefined) {
       return res.status(400).json({ error: 'name and price are required' });
     }
 
+    if (typeof clean.price !== 'number' || clean.price < 0) {
+      return res.status(400).json({ error: 'price must be a positive number' });
+    }
+
+    if (clean.imgUrl && !isValidUrl(clean.imgUrl)) {
+      return res.status(400).json({ error: 'imgUrl must be a valid HTTP/HTTPS URL' });
+    }
+
+    if (clean.stock !== undefined && (typeof clean.stock !== 'number' || clean.stock < 0)) {
+      return res.status(400).json({ error: 'stock must be a positive number' });
+    }
+
     const product = new Product({
-      name,
-      price,
-      description: description || '',
-      stock: stock || 0,
+      name: clean.name,
+      price: clean.price,
+      description: clean.description || '',
+      imgUrl: clean.imgUrl || '',
+      stock: clean.stock || 0,
       clientId: req.clientId
     });
 
@@ -46,11 +92,23 @@ const create = async (req, res) => {
 
 const update = async (req, res) => {
   try {
-    const { name, price, description, stock } = req.body;
+    const clean = sanitizeInput(req.body);
+
+    if (clean.price !== undefined && (typeof clean.price !== 'number' || clean.price < 0)) {
+      return res.status(400).json({ error: 'price must be a positive number' });
+    }
+
+    if (clean.imgUrl && !isValidUrl(clean.imgUrl)) {
+      return res.status(400).json({ error: 'imgUrl must be a valid HTTP/HTTPS URL' });
+    }
+
+    if (clean.stock !== undefined && (typeof clean.stock !== 'number' || clean.stock < 0)) {
+      return res.status(400).json({ error: 'stock must be a positive number' });
+    }
 
     const product = await Product.findOneAndUpdate(
       { _id: req.params.id, clientId: req.clientId },
-      { name, price, description, stock },
+      clean,
       { new: true, runValidators: true }
     );
 
