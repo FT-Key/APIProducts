@@ -9,6 +9,11 @@ const productRoutes = require('./routes/product.routes');
 
 const app = express();
 
+// Favicon: serve directly before any middleware
+app.get('/favicon.ico', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'favicon.png'));
+});
+
 // CORS: allows any origin
 app.use(cors({
   origin: '*',
