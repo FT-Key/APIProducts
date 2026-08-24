@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 
+router.get('/favicon.ico', (req, res) => {
+  res.redirect('/favicon.png');
+});
+
 router.get('/', (req, res) => {
   res.json({
     name: 'Products API',

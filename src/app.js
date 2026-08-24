@@ -33,6 +33,7 @@ const authLimiter = rateLimit({
   message: { error: 'Too many token requests. Try again in 15 minutes.' }
 });
 
+app.use(express.static('public'));
 app.use(express.json());
 app.use(generalLimiter);
 
