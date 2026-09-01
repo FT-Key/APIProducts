@@ -16,7 +16,7 @@ const createToken = async (req, res) => {
       token
     });
   } catch (error) {
-    res.status(500).json({ error: 'Error creating token' });
+    res.status(500).json({ error: 'Error creating token', detail: error.message });
   }
 };
 
